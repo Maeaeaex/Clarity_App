@@ -1,0 +1,46 @@
+{
+  "project_info": {
+    "project_number": "769996547932",
+    "project_id": "clarityprojectdatabase",
+    "storage_bucket": "clarityprojectdatabase.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:769996547932:android:9c7d28b3192d3a2ba2c399",
+        "android_client_info": {
+          "package_name": "com.galaxies.firebase"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "769996547932-pf4s4pekj3mtulghok5cms5ip1tchsla.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCabeBr7yIUWGjTTuiv-Loz-oK97MtjVXM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "769996547932-pf4s4pekj3mtulghok5cms5ip1tchsla.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "769996547932-f83il5r4ljarh2pipmr5oa0ibuj3bti8.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.galaxies.firebase"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
