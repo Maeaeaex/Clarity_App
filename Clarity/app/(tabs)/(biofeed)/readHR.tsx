@@ -1,13 +1,11 @@
 import { Text, View, StyleSheet } from "react-native";
-import { Link } from "expo-router";
 import ImageViewer from "@/components/ImageViewer";
-import Button from "@/components/Button";0
-import AudioButton from "../../../components/AudioButton";
-import LinkButton from "@/components/LinkButton";
+import AccelerometerGraph from "@/components/AccelerometerGraph";
+import PolarH10Monitor from "@/components/PolarH10Monitor";
 
 
 
-export default function Biofeed() {
+export default function Read() {
   return (
 
     <View style={styles.container}>
@@ -20,14 +18,15 @@ export default function Biofeed() {
       <View style={styles.imageWrapper}>
         <ImageViewer imgSource={require("@/assets/custom_images/feedback.png")} />
       </View>
-      <View style={styles.buttonWrapper}>
-        <LinkButton label="Continue" destination = "/polarCheck"/>
+      <View style={styles.accelerometerContainer}>
+        <AccelerometerGraph />
+      </View>
+      <View style={styles.monitorContainer}>
+        <PolarH10Monitor />
       </View>
       <View style={styles.textFootContainer}>
         <Text style={styles.explanation}>
-          Your breathing pattern is being measured to detect your mind-wandering state. 
-          If the app detects your mind wander, it will help you come back to the present moment by a AI voice cue.
-          This leading to faster, better meditation learning.
+          Check
         </Text>
       </View>
     </View>
@@ -36,11 +35,11 @@ export default function Biofeed() {
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
+    flex: 3,
     justifyContent: "space-between",
     alignItems: "center",
     backgroundColor: "#152238",
-    padding: 20,
+    padding: 60,
   },
   textContainer: {
     flex: 1,
@@ -58,6 +57,12 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
+  accelerometerContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 20,
+  },
   textFootContainer: {
     flex: 1,
     justifyContent: "center",
@@ -68,5 +73,11 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: "#FFF",
     textAlign: "justify",
+  },
+  monitorContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 20,
   },
 });

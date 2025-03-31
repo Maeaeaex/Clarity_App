@@ -9,6 +9,9 @@ type Props = {
     | "/mantraMeditation"
     | "/bodyScan"
     | "/choose"
+    | "/read"
+    | "/readHR"
+    | "/polarCheck"
 };
 
 export default function LinkButton({ label, destination }: Props) {

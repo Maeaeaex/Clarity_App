@@ -20,15 +20,16 @@ export default function Biofeed() {
       <View style={styles.imageWrapper}>
         <ImageViewer imgSource={require("@/assets/custom_images/feedback.png")} />
       </View>
+      <Text style={styles.explanation}>
+          Do you have a Polar H10 that you want to use for addiontional Biofeedback functionalities?
+        </Text>
       <View style={styles.buttonWrapper}>
-        <LinkButton label="Continue" destination = "/polarCheck"/>
+        <LinkButton label="Yes" destination = "/readHR"/>
+      </View>
+      <View style={styles.buttonWrapper}>
+        <LinkButton label="No" destination = "/read"/>
       </View>
       <View style={styles.textFootContainer}>
-        <Text style={styles.explanation}>
-          Your breathing pattern is being measured to detect your mind-wandering state. 
-          If the app detects your mind wander, it will help you come back to the present moment by a AI voice cue.
-          This leading to faster, better meditation learning.
-        </Text>
       </View>
     </View>
   );
