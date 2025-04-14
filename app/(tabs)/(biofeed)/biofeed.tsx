@@ -23,7 +23,7 @@ export default function Biofeed() {
       </View>
       <View style={styles.buttonWrapper}>
         {/*<Button label="Start now!"/>*/}
-        <LinkButton label="Start" destination="/read"/>
+        <LinkButton label="Start now!" destination="/read"/>
       </View>
       <View style={styles.textFootContainer}>
         <Text style={styles.explanation}>

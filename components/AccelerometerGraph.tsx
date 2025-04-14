@@ -1,11 +1,22 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, ScrollView, StyleSheet } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, Alert } from 'react-native';
 import { Accelerometer } from 'expo-sensors';
+import { Audio, InterruptionModeIOS, InterruptionModeAndroid } from 'expo-av';
+import * as FileSystem from 'expo-file-system';
+import * as Sharing from 'expo-sharing';
+
+//----- Einschub
+type AnalysisResult = {
+  changes: number[];
+  percentChanges: number[];
+  trend: "Increasing" | "Decreasing" | "Stable" | "Not enough data";
+};
+//------
 
 // Sampling and processing settings
 const samplingRate = 125; // Hz
 const dt = 1 / samplingRate;
-const batchTimeWindow = 10; // seconds
+const batchTimeWindow = 20; // seconds
 const batchSize = samplingRate * batchTimeWindow;
 
 // Low-pass filter coefficients (example)
@@ -103,8 +114,10 @@ const doubleIntegrateWithMeanCorrection = (accelArray: number[]): number[] => {
  * The AccelerometerGraph component.
  */
 const AccelerometerGraph: React.FC = () => {
+  //const [feedback, setFeedback] = useState<string>('Breathe normally');
   const [positionDataBatch, setPositionDataBatch] = useState<PositionSample[]>([]);
   const dataBuffer = useRef<AccelSample[]>([]);
+  const currentBatchWindow = useRef<number>(batchTimeWindow); // Dynamic window
 
   useEffect(() => {
     let isMounted = true;
@@ -116,6 +129,7 @@ const AccelerometerGraph: React.FC = () => {
         if (!isMounted) return;
 
         dataBuffer.current.push(accelerometerData);
+        const currentBatchSize = samplingRate * currentBatchWindow.current;
 
         if (dataBuffer.current.length >= batchSize) {
           processBuffer();
@@ -133,22 +147,21 @@ const AccelerometerGraph: React.FC = () => {
     };
   }, []);
 
+  //-------------------------ampl. & freq. variablen ----------------------------
+  const maxAmplitude = useRef<number>(0);
+  const minAmplitude = useRef<number>(0);
+  const zeroPoints = useRef<number[]>([]);
+  const frequencies = useRef<number[]>([]);
+  const amplitudes = useRef<number[]>([]);
+  const previousPosition = useRef<number>(0);
+
+
+  //-------------------------ampl. & freq. variablen ende ----------------------------
+
   const processBuffer = () => {
     const buffer = dataBuffer.current;
+    if (buffer.length < samplingRate * 2) return; // Minimum 2 seconds of data
 
-    //-------------------------ampl. & freq. variablen ----------------------------
-    let max_amplitude = 0;
-    let min_amplitude = 0;
-    const zero_points: number[] = [];
-    const frequency: number[] = [];
-    const amplitude: number[] = [];
-    const amplitude_each_max: number[] = [];
-    const amplitude_each_min: number[] = [];
-
-    let previousPosition = 0;
-    let lastZeroIndex: number | null = null; // index used to distinguish, like a timestamp
-    let middleTime = null;
-    //-------------------------ampl. & freq. variablen ende ----------------------------
 
     const xSamples: number[] = buffer.map((sample) => sample.x);
     const ySamples: number[] = buffer.map((sample) => sample.y);
@@ -177,83 +190,241 @@ const AccelerometerGraph: React.FC = () => {
     }));
 
     //-------------------------ampl. & freq. rest ----------------------------
-    positionBatch.forEach((dataPoint, index) => {
-      const currentPosition = dataPoint.x; // Example: using X-axis for amplitude analysis
-      //const currentTime = buffer[index]?.time || index; // Assuming time data exists
+    {/*const saveAnalysisData = async (
+      frequency: number[],
+      amplitude: number[],
+      freqAnalysis: AnalysisResult,
+      ampAnalysis: AnalysisResult,
+      rawData: AccelSample[],
+      windowSize: number,
+      zeroPoints: number[]
+    ) => {
+      const timestamp = new Date().toISOString();
+      const path = `${FileSystem.documentDirectory}breathing_analysis_${timestamp}.csv`;
+      
+      // Create CSV content
+  let csvContent = "Type,Index,Value,Timestamp\n"; // Header row
+  
+  // Add metadata
+  csvContent += `metadata,windowSize,${windowSize},${timestamp}\n`;
+  csvContent += `metadata,samplingRate,${samplingRate},${timestamp}\n`;
+  csvContent += `metadata,dt,${dt},${timestamp}\n`;
+  
+  // Add frequency data
+  frequency.forEach((val, i) => {
+    csvContent += `frequency,${i},${val},${timestamp}\n`;
+  });
+  
+  // Add amplitude data
+  amplitude.forEach((val, i) => {
+    csvContent += `amplitude,${i},${val},${timestamp}\n`;
+  });
+  
+  // Add zero points
+  zeroPoints.forEach((val, i) => {
+    csvContent += `zeroPoint,${i},${val},${timestamp}\n`;
+  });
+  
+  // Add raw data sample
+  rawData.slice(0, 10).forEach((sample, i) => {
+    csvContent += `raw_data,${i},${sample.z},${timestamp}\n`;
+  });
 
-      // Check amplitude
-      if (currentPosition > max_amplitude) {
-        max_amplitude = currentPosition;
-      } else if (currentPosition < min_amplitude){
-        min_amplitude = currentPosition;
-      }
-
-      // Detect zero crossings
-      if ((previousPosition<=0 && currentPosition>=0) || (previousPosition>=0 && currentPosition<=0)){
-        let zeroIndex;
-        if ((Math.abs(previousPosition)<Math.abs(currentPosition)) && lastZeroIndex !== index-1){
-          zeroIndex = index-1;
-        } else if ((Math.abs(previousPosition)>Math.abs(currentPosition)) && lastZeroIndex !== index) {
-          zeroIndex = index;
-        } else if ((Math.abs(previousPosition)==Math.abs(currentPosition)) && lastZeroIndex !== index){
-          middleTime = (index-1)+(index-(index-1))/2
-          zeroIndex = middleTime;
-        }
-
-        //Zeiten der Nullpunkte in zero_points liste abspeichern
-        if (zeroIndex && lastZeroIndex !== zeroIndex){
-          zero_points.push(zeroIndex);
-          lastZeroIndex = zeroIndex;
-
-          //frequenz berechnen beginnen, wenn wir 3 Nullpunkte haben
-      if (zero_points.length<4 && zero_points.length % 3 == 0 || zero_points.length>4 && zero_points.length % 2 == 1) {
-        let freq = Math.abs(zero_points[zero_points.length-1]-zero_points[zero_points.length-3]);
-        frequency.push(freq);
-
-        //Amplitude für frequenz speichern und zurücksetzen
-        if (zero_points.length > 2) {
-          amplitude.push(max_amplitude-min_amplitude);
-          amplitude_each_max.push(max_amplitude);
-          amplitude_each_min.push(min_amplitude);
-          min_amplitude = 0;
-          max_amplitude = 0;
-        }
-      }
-    }}
-    previousPosition = currentPosition;
+  try {
+    await FileSystem.writeAsStringAsync(
+      path,
+      csvContent
+    );
+    console.log('📁 CSV-Datei gespeichert unter:', path);
     
+  } catch (error) {
+    console.error('Fehler beim Speichern der CSV-Datei:', error);
+  }
+};
+
+const openCSV = async (fileUri: string) => {
+  try {
+    const content = await FileSystem.readAsStringAsync(fileUri);
+    console.log('CSV-Inhalt:', content);
+  } catch (error) {
+    console.error('Fehler beim Lesen:', error);
+  }
+};
+*/}
+    //openCSV(`${FileSystem.documentDirectory}///data/user/0/host.exp.exponent/files/breathing_analysis_2025-04-14T01:19:03.350Z.csv`)
+
+    //---------------
+    const frequency: number[] = [];
+    const amplitude: number[] = [];
+    let maxAmplitude = 0;
+    let minAmplitude = 0;
+    let previousPosition = 0;
+    const zeroPoints: number[] = [];
+
+    positionBatch.forEach((dataPoint, index) => {
+      const currentPosition = dataPoint.z;
+
+      // Track min/max amplitude
+      if (currentPosition > maxAmplitude) maxAmplitude = currentPosition;
+      if (currentPosition < minAmplitude) minAmplitude = currentPosition;
+
+      // Detect zero crossings (improved robustness)
+      if (Math.sign(previousPosition) !== Math.sign(currentPosition)) {
+        zeroPoints.push(index);
+
+        // Calculate frequency when we have at least 2 zero crossings
+        if (zeroPoints.length >= 3) {
+          const fullPeriod = (zeroPoints[zeroPoints.length - 1] - zeroPoints[zeroPoints.length - 3]) * dt; // gibt abstand dazwischen in sekunden an 
+          if (fullPeriod > 0) {
+           frequency.push(1 / fullPeriod);
+           amplitude.push(maxAmplitude - minAmplitude);
+           // Reset for next cycle
+           maxAmplitude = 0;
+           minAmplitude = 0;
+          }
+        }
+     }
+     previousPosition = currentPosition;
     });
 
-    // Letzte Amplitude speichern
-    if (zero_points.length % 2 == 1) {
-      amplitude.push(max_amplitude-min_amplitude);
-      amplitude_each_max.push(max_amplitude);
-      amplitude_each_min.push(min_amplitude);
-      min_amplitude = 0;
-      max_amplitude = 0;
+    // ==================== TREND ANALYSIS ====================
+
+    const compareLastThree = (values: number[], type: 'frequency' | 'amplitude'): AnalysisResult => {
+      if (values.length < 2) {
+        return { changes: [], percentChanges: [], trend: "Not enough data" };
+      }
+
+      const windowSize = Math.min(5, values.length); // Dynamic window
+      const windowValues = values.slice(-windowSize);
+      const changes: number[] = [];
+      const percentChanges: number[] = [];
+
+      for (let i = 1; i < windowValues.length; i++) {
+        const change = windowValues[i] - windowValues[i-1];
+        const percentChange = (change / windowValues[i-1]) * 100;
+        changes.push(change);
+        percentChanges.push(percentChange);
+      }
+
+      const avgPercentChange = percentChanges.reduce((sum, change) => 
+        sum + change, 0) / percentChanges.length;
+
+      let trend: "Increasing" | "Decreasing" | "Stable" = "Stable";
+      if (Math.abs(avgPercentChange) >= 3) {
+       trend = avgPercentChange > 0 ? "Increasing" : "Decreasing";
+       // Real-time feedback
+       if (type === 'frequency') {
+         console.log(trend === "Increasing" ? "Breathe slower" : "Breathe faster");
+       } else {
+         console.log(trend === "Decreasing" ? "Breathe deeper" : "Breathe shallower");
+       }
+     }
+
+     return { changes, percentChanges, trend};
+   };
+
+    // Run analysis
+    const freqAnalysis = compareLastThree(frequency, 'frequency');
+    const ampAnalysis = compareLastThree(amplitude, 'amplitude');
+
+    // ==================== OUTPUT RESULTS ====================
+    console.log("\n===== BREATHING ANALYSIS =====");
+    console.log("Last 3 frequencies (Hz):", frequency.slice(-3).map(f => f.toFixed(2)));
+    console.log("Frequency changes:", freqAnalysis.changes.map(change => Number(change).toFixed(6)));
+    console.log("Frequency trend:", freqAnalysis.trend);
+  
+    console.log("\nLast 3 amplitudes:", amplitude.slice(-3).map(a => a.toFixed(6)));
+    console.log("Amplitude changes:", ampAnalysis.changes.map(change => Number(change).toFixed(6)));
+    console.log("Amplitude trend:", ampAnalysis.trend);
+
+    // ==================== SYSTEM ADJUSTMENTS ====================
+   // Adaptive batch control
+   if (frequency.length < 2) {
+    currentBatchWindow.current = Math.min(32, currentBatchWindow.current * 1.2);
+    dataBuffer.current = buffer.slice(-Math.floor(buffer.length / 2));
+    console.log(`Adapting window to ${currentBatchWindow.current}s`);
+    return;
+  }
+
+  // Reset for next batch
+  dataBuffer.current = [];
+  currentBatchWindow.current = batchTimeWindow;
+
+
+  const handleExport = async () => {
+    try {
+      // Verify we have data to export
+      if (!positionBatch || !positionBatch.length) {
+        Alert.alert("No Data", "No breathing data available to export");
+        return;
+      }
+  
+      // Prepare CSV content
+      const timestamp = new Date().toISOString();
+      const csvHeader = "Time(sec),X,Y,Z,Frequency(Hz),Amplitude(m)\n";
+      
+      let csvContent = csvHeader;
+      
+      positionBatch.forEach((sample, index) => {
+        const time = (index / samplingRate).toFixed(3);
+        const freq = (frequencies.current[index] ?? 0).toFixed(3);
+        const amp = (amplitudes.current[index] ?? 0).toFixed(3);
+        
+        csvContent += `${time},${sample.x},${sample.y},${sample.z},${freq},${amp}\n`;
+      });
+  
+      // Define save path
+      const path = `${FileSystem.documentDirectory}breathing_analysis_${timestamp}.csv`;
+      
+      // Write file
+      await FileSystem.writeAsStringAsync(path, csvContent);
+      console.log("✅ CSV saved to:", path, {
+        samples: positionBatch.length,
+        frequencies: frequencies.current.length,
+        amplitudes: amplitudes.current.length
+      }
+      );
+  
+      // Share the file
+      if (await Sharing.isAvailableAsync()) {
+        await Sharing.shareAsync(path, {
+          mimeType: 'text/csv',
+          dialogTitle: 'Share Breathing Analysis',
+          UTI: 'public.comma-separated-values-text'
+        });
+      } else {
+        Alert.alert(
+          'Export Complete',
+          `File saved to: ${path}`,
+          [{ text: 'OK' }]
+        );
+      }
+  
+    } catch (error: unknown) {
+      console.error('❌ Export failed:', error);
+      let errorMessage = 'Could not save the data file';
+      if (error instanceof Error) errorMessage = error.message;
+      Alert.alert('Export Failed', errorMessage, [{ text: 'OK' }]);
     }
-
-    console.log("Zero points:", zero_points);//Nullpunkte
-    console.log("Frequencies:", frequency);
-    console.log("Amplitude:", amplitude);
-
-    //-------------------------ampl. & freq. rest ende ----------------------------
-
-    setPositionDataBatch(positionBatch);
-
-    dataBuffer.current = [];
   };
+  
+  // OR 2. Call it automatically after successful analysis:
+  if (frequency.length >= 2) {
+    handleExport().catch(console.error);
+  }
+  
+}
 
   return (
     <ScrollView style={styles.container}>
       <Text style={styles.header}>Position Data (X, Y, Z)</Text>
-      {positionDataBatch.map((dataPoint, index) => (
+      {/*positionDataBatch.map((dataPoint, index) => (
         <View key={index} style={styles.row}>
           <Text style={styles.cell}>X: {dataPoint.x.toFixed(4)}</Text>
           <Text style={styles.cell}>Y: {dataPoint.y.toFixed(4)}</Text>
           <Text style={styles.cell}>Z: {dataPoint.z.toFixed(4)}</Text>
         </View>
-      ))}
+      ))*/}
     </ScrollView>
   );
 };
