@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, ScrollView, StyleSheet, Alert } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, TouchableOpacity,Pressable, Alert } from 'react-native';
 import { Accelerometer } from 'expo-sensors';
 import * as FileSystem from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
@@ -9,7 +9,7 @@ const samplingRate = 125; // Hz
 const dt = 1 / samplingRate;
 const batchTimeWindow = 10; // seconds
 const batchSize = samplingRate * batchTimeWindow;
-const RECORDING_DURATION = 600; // 10 minutes in seconds
+const RECORDING_DURATION = 600; // 10 minutes in seconds, here time limit of recording
 
 // Low-pass filter coefficients (example)
 const lp_b: number[] = [0.0675, 0.1349, 0.0675];
@@ -194,7 +194,6 @@ const AccelerometerGraph: React.FC = () => {
     allPositionData.current = [...allPositionData.current, ...positionBatch];
     setPositionDataBatch(positionBatch);
 
-    //dataBuffer.current = [];
   };
 
 
@@ -202,8 +201,6 @@ const AccelerometerGraph: React.FC = () => {
     let isMounted = true;
     startTimeRef.current = Date.now();
 
-    //const subscribe = () => {
-    //  Accelerometer.setUpdateInterval(1000 / samplingRate);
 
       const subscription = Accelerometer.addListener((accelerometerData: AccelSample) => {
         if (!isMounted) return;
@@ -240,6 +237,12 @@ const AccelerometerGraph: React.FC = () => {
     <View style={styles.container}>
       <Text>Recording position data...</Text>
       <Text>Duration: {RECORDING_DURATION / 60} minutes</Text>
+      <Text></Text>
+    <View style={styles.buttonContainer}>
+      <Pressable style={[styles.button, { backgroundColor: "#121212" }]} onPress={saveDataToFile}>
+        <Text style={styles.buttonLabel}>Save data</Text>
+      </Pressable>
+    </View>
     </View>
   );
 };
@@ -266,6 +269,27 @@ const styles = StyleSheet.create({
   },
   cell: {
     fontSize: 14,
+  },
+  buttonContainer: {
+    width: 320,
+    height: 68,
+    marginHorizontal: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 3,
+  },
+  button: {
+    borderRadius: 10,
+    width: '100%',
+    height: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexDirection: 'row',
+    backgroundColor: "#121212"
+  },
+  buttonLabel: {
+    color: '#fff',
+    fontSize: 16,
   },
 });
 

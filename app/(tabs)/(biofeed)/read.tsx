@@ -1,6 +1,6 @@
 import { Text, View, StyleSheet, ScrollView } from "react-native";
 import ImageViewer from "@/components/ImageViewer";
-import AccelerometerGraph from "@/components/AccelerometerGraph";
+import AccelerometerGraph from "@/components/AccelerometerGraph_button";
 
 export default function Read() {
   return (
