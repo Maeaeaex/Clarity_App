@@ -1,6 +1,6 @@
 import { Text, View, StyleSheet } from "react-native";
 import ImageViewer from "@/components/ImageViewer";
-import AccelerometerGraph from "@/components/AccelerometerGraph";
+import AccelerometerGraph from "@/components/AccelerometerGraph_old";
 import PolarH10Monitor from "@/components/PolarH10Monitor";
 
 

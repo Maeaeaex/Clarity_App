@@ -1,23 +1,15 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, ScrollView, StyleSheet, Alert } from 'react-native';
 import { Accelerometer } from 'expo-sensors';
-import { Audio, InterruptionModeIOS, InterruptionModeAndroid } from 'expo-av';
 import * as FileSystem from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
-
-//----- Einschub
-type AnalysisResult = {
-  changes: number[];
-  percentChanges: number[];
-  trend: "Increasing" | "Decreasing" | "Stable" | "Not enough data";
-};
-//------
 
 // Sampling and processing settings
 const samplingRate = 125; // Hz
 const dt = 1 / samplingRate;
-const batchTimeWindow = 20; // seconds
+const batchTimeWindow = 10; // seconds
 const batchSize = samplingRate * batchTimeWindow;
+const RECORDING_DURATION = 120; // 10 minutes in seconds
 
 // Low-pass filter coefficients (example)
 const lp_b: number[] = [0.0675, 0.1349, 0.0675];
@@ -114,54 +106,64 @@ const doubleIntegrateWithMeanCorrection = (accelArray: number[]): number[] => {
  * The AccelerometerGraph component.
  */
 const AccelerometerGraph: React.FC = () => {
-  //const [feedback, setFeedback] = useState<string>('Breathe normally');
   const [positionDataBatch, setPositionDataBatch] = useState<PositionSample[]>([]);
   const dataBuffer = useRef<AccelSample[]>([]);
-  const currentBatchWindow = useRef<number>(batchTimeWindow); // Dynamic window
+  const startTimeRef = useRef<number>(Date.now());
+  const allPositionData = useRef<PositionSample[]>([]); // Stores all collected data
+  const subscriptionRef = useRef<ReturnType<typeof Accelerometer.addListener> | null>(null);
 
-  useEffect(() => {
-    let isMounted = true;
+  const saveDataToFile = async () => {
+    try {
+      if (allPositionData.current.length === 0) {
+        Alert.alert("No Data", "No position data available to save");
+        return;
+      }
 
-    const subscribe = () => {
-      Accelerometer.setUpdateInterval(1000 / samplingRate);
-
-      const subscription = Accelerometer.addListener((accelerometerData: AccelSample) => {
-        if (!isMounted) return;
-
-        dataBuffer.current.push(accelerometerData);
-        const currentBatchSize = samplingRate * currentBatchWindow.current;
-
-        if (dataBuffer.current.length >= batchSize) {
-          processBuffer();
-        }
+      // Create CSV content
+      let csvContent = "Time(sec),X,Y,Z\n";
+      allPositionData.current.forEach((sample, index) => {
+        const time = (index / samplingRate).toFixed(3);
+        csvContent += `${time},${sample.x},${sample.y},${sample.z}\n`;
       });
 
-      return subscription;
-    };
+      // Create filename with timestamp
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+      const filename = `position_data_${timestamp}.csv`;
+      const fileUri = `${FileSystem.documentDirectory}${filename}`;
 
-    const subscription = subscribe();
+      // Write file
+      await FileSystem.writeAsStringAsync(fileUri, csvContent);
+      console.log("File saved to:", fileUri);
 
-    return () => {
-      isMounted = false;
-      subscription && subscription.remove();
-    };
-  }, []);
-
-  //-------------------------ampl. & freq. variablen ----------------------------
-  const maxAmplitude = useRef<number>(0);
-  const minAmplitude = useRef<number>(0);
-  const zeroPoints = useRef<number[]>([]);
-  const frequencies = useRef<number[]>([]);
-  const amplitudes = useRef<number[]>([]);
-  const previousPosition = useRef<number>(0);
-
-
-  //-------------------------ampl. & freq. variablen ende ----------------------------
+      // Share the file
+      if (await Sharing.isAvailableAsync()) {
+        await Sharing.shareAsync(fileUri, {
+          mimeType: 'text/csv',
+          dialogTitle: 'Share Position Data',
+          UTI: 'public.comma-separated-values-text'
+        });
+      } else {
+        Alert.alert(
+          'Save Complete',
+          `Position data saved to:\n${fileUri}`,
+          [{ text: 'OK' }]
+        );
+      }
+    } catch (error) {
+      console.error("Failed to save file:", error);
+      Alert.alert(
+        'Save Failed',
+        'Could not save position data',
+        [{ text: 'OK' }]
+      );
+    }
+  };
 
   const processBuffer = () => {
-    const buffer = dataBuffer.current;
-    if (buffer.length < samplingRate * 2) return; // Minimum 2 seconds of data
+    const buffer = [...dataBuffer.current];
+    dataBuffer.current = [];
 
+    if (buffer.length === 0) return;
 
     const xSamples: number[] = buffer.map((sample) => sample.x);
     const ySamples: number[] = buffer.map((sample) => sample.y);
@@ -189,243 +191,56 @@ const AccelerometerGraph: React.FC = () => {
       z: positionZ[index],
     }));
 
-    //-------------------------ampl. & freq. rest ----------------------------
-    {/*const saveAnalysisData = async (
-      frequency: number[],
-      amplitude: number[],
-      freqAnalysis: AnalysisResult,
-      ampAnalysis: AnalysisResult,
-      rawData: AccelSample[],
-      windowSize: number,
-      zeroPoints: number[]
-    ) => {
-      const timestamp = new Date().toISOString();
-      const path = `${FileSystem.documentDirectory}breathing_analysis_${timestamp}.csv`;
-      
-      // Create CSV content
-  let csvContent = "Type,Index,Value,Timestamp\n"; // Header row
-  
-  // Add metadata
-  csvContent += `metadata,windowSize,${windowSize},${timestamp}\n`;
-  csvContent += `metadata,samplingRate,${samplingRate},${timestamp}\n`;
-  csvContent += `metadata,dt,${dt},${timestamp}\n`;
-  
-  // Add frequency data
-  frequency.forEach((val, i) => {
-    csvContent += `frequency,${i},${val},${timestamp}\n`;
-  });
-  
-  // Add amplitude data
-  amplitude.forEach((val, i) => {
-    csvContent += `amplitude,${i},${val},${timestamp}\n`;
-  });
-  
-  // Add zero points
-  zeroPoints.forEach((val, i) => {
-    csvContent += `zeroPoint,${i},${val},${timestamp}\n`;
-  });
-  
-  // Add raw data sample
-  rawData.slice(0, 10).forEach((sample, i) => {
-    csvContent += `raw_data,${i},${sample.z},${timestamp}\n`;
-  });
+    allPositionData.current = [...allPositionData.current, ...positionBatch];
+    setPositionDataBatch(positionBatch);
 
-  try {
-    await FileSystem.writeAsStringAsync(
-      path,
-      csvContent
-    );
-    console.log('📁 CSV-Datei gespeichert unter:', path);
-    
-  } catch (error) {
-    console.error('Fehler beim Speichern der CSV-Datei:', error);
-  }
-};
-
-const openCSV = async (fileUri: string) => {
-  try {
-    const content = await FileSystem.readAsStringAsync(fileUri);
-    console.log('CSV-Inhalt:', content);
-  } catch (error) {
-    console.error('Fehler beim Lesen:', error);
-  }
-};
-*/}
-    //openCSV(`${FileSystem.documentDirectory}///data/user/0/host.exp.exponent/files/breathing_analysis_2025-04-14T01:19:03.350Z.csv`)
-
-    //---------------
-    const frequency: number[] = [];
-    const amplitude: number[] = [];
-    let maxAmplitude = 0;
-    let minAmplitude = 0;
-    let previousPosition = 0;
-    const zeroPoints: number[] = [];
-
-    positionBatch.forEach((dataPoint, index) => {
-      const currentPosition = dataPoint.z;
-
-      // Track min/max amplitude
-      if (currentPosition > maxAmplitude) maxAmplitude = currentPosition;
-      if (currentPosition < minAmplitude) minAmplitude = currentPosition;
-
-      // Detect zero crossings (improved robustness)
-      if (Math.sign(previousPosition) !== Math.sign(currentPosition)) {
-        zeroPoints.push(index);
-
-        // Calculate frequency when we have at least 2 zero crossings
-        if (zeroPoints.length >= 3) {
-          const fullPeriod = (zeroPoints[zeroPoints.length - 1] - zeroPoints[zeroPoints.length - 3]) * dt; // gibt abstand dazwischen in sekunden an 
-          if (fullPeriod > 0) {
-           frequency.push(1 / fullPeriod);
-           amplitude.push(maxAmplitude - minAmplitude);
-           // Reset for next cycle
-           maxAmplitude = 0;
-           minAmplitude = 0;
-          }
-        }
-     }
-     previousPosition = currentPosition;
-    });
-
-    // ==================== TREND ANALYSIS ====================
-
-    const compareLastThree = (values: number[], type: 'frequency' | 'amplitude'): AnalysisResult => {
-      if (values.length < 2) {
-        return { changes: [], percentChanges: [], trend: "Not enough data" };
-      }
-
-      const windowSize = Math.min(5, values.length); // Dynamic window
-      const windowValues = values.slice(-windowSize);
-      const changes: number[] = [];
-      const percentChanges: number[] = [];
-
-      for (let i = 1; i < windowValues.length; i++) {
-        const change = windowValues[i] - windowValues[i-1];
-        const percentChange = (change / windowValues[i-1]) * 100;
-        changes.push(change);
-        percentChanges.push(percentChange);
-      }
-
-      const avgPercentChange = percentChanges.reduce((sum, change) => 
-        sum + change, 0) / percentChanges.length;
-
-      let trend: "Increasing" | "Decreasing" | "Stable" = "Stable";
-      if (Math.abs(avgPercentChange) >= 3) {
-       trend = avgPercentChange > 0 ? "Increasing" : "Decreasing";
-       // Real-time feedback
-       if (type === 'frequency') {
-         console.log(trend === "Increasing" ? "Breathe slower" : "Breathe faster");
-       } else {
-         console.log(trend === "Decreasing" ? "Breathe deeper" : "Breathe shallower");
-       }
-     }
-
-     return { changes, percentChanges, trend};
-   };
-
-    // Run analysis
-    const freqAnalysis = compareLastThree(frequency, 'frequency');
-    const ampAnalysis = compareLastThree(amplitude, 'amplitude');
-
-    // ==================== OUTPUT RESULTS ====================
-    console.log("\n===== BREATHING ANALYSIS =====");
-    console.log("Last 3 frequencies (Hz):", frequency.slice(-3).map(f => f.toFixed(2)));
-    console.log("Frequency changes:", freqAnalysis.changes.map(change => Number(change).toFixed(6)));
-    console.log("Frequency trend:", freqAnalysis.trend);
-  
-    console.log("\nLast 3 amplitudes:", amplitude.slice(-3).map(a => a.toFixed(6)));
-    console.log("Amplitude changes:", ampAnalysis.changes.map(change => Number(change).toFixed(6)));
-    console.log("Amplitude trend:", ampAnalysis.trend);
-
-    // ==================== SYSTEM ADJUSTMENTS ====================
-   // Adaptive batch control
-   if (frequency.length < 2) {
-    currentBatchWindow.current = Math.min(32, currentBatchWindow.current * 1.2);
-    dataBuffer.current = buffer.slice(-Math.floor(buffer.length / 2));
-    console.log(`Adapting window to ${currentBatchWindow.current}s`);
-    return;
-  }
-
-  // Reset for next batch
-  dataBuffer.current = [];
-  currentBatchWindow.current = batchTimeWindow;
+    //dataBuffer.current = [];
+  };
 
 
-  const handleExport = async () => {
-    try {
-      // Verify we have data to export
-      if (!positionBatch || !positionBatch.length) {
-        Alert.alert("No Data", "No breathing data available to export");
+  useEffect(() => {
+    let isMounted = true;
+    startTimeRef.current = Date.now();
+
+    //const subscribe = () => {
+    //  Accelerometer.setUpdateInterval(1000 / samplingRate);
+
+      const subscription = Accelerometer.addListener((accelerometerData: AccelSample) => {
+        if (!isMounted) return;
+
+        // Check recording duration
+      const elapsedSeconds = (Date.now() - startTimeRef.current) / 1000;
+      if (elapsedSeconds >= RECORDING_DURATION) {
+        subscriptionRef.current?.remove();
+        processBuffer(); // Process any remaining data
+        saveDataToFile(); // Save all collected data
         return;
       }
-  
-      // Prepare CSV content
-      const timestamp = new Date().toISOString();
-      const csvHeader = "Time(sec),X,Y,Z,Frequency(Hz),Amplitude(m)\n";
-      
-      let csvContent = csvHeader;
-      
-      positionBatch.forEach((sample, index) => {
-        const time = (index / samplingRate).toFixed(3);
-        const freq = (frequencies.current[index] ?? 0).toFixed(3);
-        const amp = (amplitudes.current[index] ?? 0).toFixed(3);
-        
-        csvContent += `${time},${sample.x},${sample.y},${sample.z},${freq},${amp}\n`;
+
+        dataBuffer.current.push(accelerometerData);
+
+        if (dataBuffer.current.length >= batchSize) {
+          processBuffer();
+        }
       });
+
+      subscriptionRef.current = subscription;
+    Accelerometer.setUpdateInterval(1000 / samplingRate);
+
+    return () => {
+      isMounted = false;
+      subscriptionRef.current?.remove();
+    };
+  }, []);
+
+
   
-      // Define save path
-      const path = `${FileSystem.documentDirectory}breathing_analysis_${timestamp}.csv`;
-      
-      // Write file
-      await FileSystem.writeAsStringAsync(path, csvContent);
-      console.log("✅ CSV saved to:", path, {
-        samples: positionBatch.length,
-        frequencies: frequencies.current.length,
-        amplitudes: amplitudes.current.length
-      }
-      );
-  
-      // Share the file
-      if (await Sharing.isAvailableAsync()) {
-        await Sharing.shareAsync(path, {
-          mimeType: 'text/csv',
-          dialogTitle: 'Share Breathing Analysis',
-          UTI: 'public.comma-separated-values-text'
-        });
-      } else {
-        Alert.alert(
-          'Export Complete',
-          `File saved to: ${path}`,
-          [{ text: 'OK' }]
-        );
-      }
-  
-    } catch (error: unknown) {
-      console.error('❌ Export failed:', error);
-      let errorMessage = 'Could not save the data file';
-      if (error instanceof Error) errorMessage = error.message;
-      Alert.alert('Export Failed', errorMessage, [{ text: 'OK' }]);
-    }
-  };
-  
-  // OR 2. Call it automatically after successful analysis:
-  if (frequency.length >= 2) {
-    handleExport().catch(console.error);
-  }
-  
-}
 
   return (
-    <ScrollView style={styles.container}>
-      <Text style={styles.header}>Position Data (X, Y, Z)</Text>
-      {/*positionDataBatch.map((dataPoint, index) => (
-        <View key={index} style={styles.row}>
-          <Text style={styles.cell}>X: {dataPoint.x.toFixed(4)}</Text>
-          <Text style={styles.cell}>Y: {dataPoint.y.toFixed(4)}</Text>
-          <Text style={styles.cell}>Z: {dataPoint.z.toFixed(4)}</Text>
-        </View>
-      ))*/}
-    </ScrollView>
+    <View style={styles.container}>
+      <Text>Recording position data...</Text>
+      <Text>Duration: {RECORDING_DURATION / 60} minutes</Text>
+    </View>
   );
 };
 
@@ -453,5 +268,4 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
 });
-
 
