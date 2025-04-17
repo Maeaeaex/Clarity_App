@@ -13,7 +13,6 @@ type AnalysisResult = {
   trend: "Increasing" | "Decreasing" | "Stable" | "Not enough data";
 };
 
-const recordingDuration = 600; // 10 minutes in seconds
 //------
 
 // Sampling and processing settings
@@ -122,12 +121,8 @@ const AccelerometerGraph: React.FC = () => {
   const currentBatchWindow = useRef<number>(batchTimeWindow); // Dynamic window
   const startTimeRef = useRef<number | null>(null);
 
-  const frequency: number[] = [];
-  const amplitude: number[] = [];
 
-
-
-  {/*useEffect(() => {
+  useEffect(() => {
     let isMounted = true;
     startTimeRef.current = Date.now(); // added
 
@@ -137,17 +132,8 @@ const AccelerometerGraph: React.FC = () => {
       const subscription = Accelerometer.addListener((accelerometerData: AccelSample) => {
         if (!isMounted) return;
 
-        // Check if 10 minutes have elapsed
-        const elapsedSeconds = (Date.now() - startTimeRef.current!) / 1000;
-        if (elapsedSeconds >= recordingDuration) {
-          subscription.remove();
-          processBuffer(); // Process final batch
-          handleExport();  // Export all data
-          return;
-        }
 
         dataBuffer.current.push(accelerometerData);
-        const currentBatchSize = samplingRate * currentBatchWindow.current;
 
         if (dataBuffer.current.length >= batchSize) {
           processBuffer();
@@ -164,18 +150,8 @@ const AccelerometerGraph: React.FC = () => {
       subscription && subscription.remove();
     };
   }, []);
-*/}
-
-  //-------------------------ampl. & freq. variablen ----------------------------
-  const maxAmplitude = useRef<number>(0);
-  const minAmplitude = useRef<number>(0);
-  const zeroPoints = useRef<number[]>([]);
-  const frequencies = useRef<number[]>([]);
-  const amplitudes = useRef<number[]>([]);
-  const previousPosition = useRef<number>(0);
 
 
-  //-------------------------ampl. & freq. variablen ende ----------------------------
 
   const processBuffer = () => {
     const buffer = dataBuffer.current;
@@ -209,102 +185,6 @@ const AccelerometerGraph: React.FC = () => {
     }));
 
     
-
-    const handleExport = async () => {
-      console.log("Exporting 10 minutes of data...");
-      try {
-        // Verify we have data to export
-        if (!positionBatch || !positionBatch.length) {
-          Alert.alert("No Data", "No breathing data available to export");
-          return;
-        }
-    
-        // Prepare CSV content
-        const timestamp = new Date().toISOString();
-        const csvHeader = "Time(sec),X,Y,Z,Frequency(Hz),Amplitude(m)\n";
-        
-        let csvContent = csvHeader;
-        
-        positionBatch.forEach((sample, index) => {
-          const time = (index / samplingRate).toFixed(3);
-          const freq = (frequency[index] ?? 0).toFixed(5);
-          const amp = (amplitude[index] ?? 0).toFixed(6);
-          
-          csvContent += `${time},${sample.x},${sample.y},${sample.z},${freq},${amp}\n`;
-        });
-    
-        // Define save path
-        const path = `${FileSystem.documentDirectory}breathing_analysis_${timestamp}.csv`;
-        
-        // Write file
-        await FileSystem.writeAsStringAsync(path, csvContent);
-        console.log("✅ CSV saved to:", path, {
-          samples: positionBatch.length,
-          frequencies: frequency.length,
-          amplitudes: amplitude.length
-        }
-        );
-    
-        // Share the file
-        if (await Sharing.isAvailableAsync()) {
-          await Sharing.shareAsync(path, {
-            mimeType: 'text/csv',
-            dialogTitle: 'Share Breathing Analysis',
-            UTI: 'public.comma-separated-values-text'
-          });
-        } else {
-          Alert.alert(
-            'Export Complete',
-            `File saved to: ${path}`,
-            [{ text: 'OK' }]
-          );
-        }
-    
-      } catch (error: unknown) {
-        console.error('❌ Export failed:', error);
-        let errorMessage = 'Could not save the data file';
-        if (error instanceof Error) errorMessage = error.message;
-        Alert.alert('Export Failed', errorMessage, [{ text: 'OK' }]);
-      }
-    };
-
-    useEffect(() => {
-      let isMounted = true;
-      startTimeRef.current = Date.now(); // added
-  
-      const subscribe = () => {
-        Accelerometer.setUpdateInterval(1000 / samplingRate);
-  
-        const subscription = Accelerometer.addListener((accelerometerData: AccelSample) => {
-          if (!isMounted) return;
-  
-          // Check if 10 minutes have elapsed
-          const elapsedSeconds = (Date.now() - startTimeRef.current!) / 1000;
-          if (elapsedSeconds >= recordingDuration) {
-            subscription.remove();
-            processBuffer(); // Process final batch
-            handleExport();  // Export all data
-            return;
-          }
-  
-          dataBuffer.current.push(accelerometerData);
-          //const currentBatchSize = samplingRate * currentBatchWindow.current;
-  
-          if (dataBuffer.current.length >= batchSize) {
-            processBuffer();
-          }
-        });
-  
-        return subscription;
-      };
-  
-      const subscription = subscribe();
-  
-      return () => {
-        isMounted = false;
-        subscription && subscription.remove();
-      };
-    }, []);
     //-------------------------ampl. & freq. rest ----------------------------
     const frequency: number[] = [];
     const amplitude: number[] = [];
@@ -359,11 +239,12 @@ const AccelerometerGraph: React.FC = () => {
         percentChanges.push(percentChange);
       }
 
+
       const avgPercentChange = percentChanges.reduce((sum, change) => 
         sum + change, 0) / percentChanges.length;
 
       let trend: "Increasing" | "Decreasing" | "Stable" = "Stable";
-      if (Math.abs(avgPercentChange) >= 20) {
+      if (Math.abs(avgPercentChange) > 20) {
        trend = avgPercentChange > 0 ? "Increasing" : "Decreasing";
        // Real-time feedback
        if (type === 'frequency') {
@@ -384,10 +265,12 @@ const AccelerometerGraph: React.FC = () => {
     console.log("\n===== BREATHING ANALYSIS =====");
     console.log("Last 3 frequencies (Hz):", frequency.slice(-3).map(f => f.toFixed(2)));
     console.log("Frequency changes:", freqAnalysis.changes.map(change => Number(change).toFixed(6)));
+    //console.log("Frequency percent changes:", freqAnalysis.percentChanges.map(percentChanges => Number(percentChanges).toFixed(6)));
     console.log("Frequency trend:", freqAnalysis.trend);
   
     console.log("\nLast 3 amplitudes:", amplitude.slice(-3).map(a => a.toFixed(6)));
     console.log("Amplitude changes:", ampAnalysis.changes.map(change => Number(change).toFixed(6)));
+    //console.log("Amplitude percent changes:", ampAnalysis.percentChanges.map(percentChanges => Number(percentChanges).toFixed(6)));
     console.log("Amplitude trend:", ampAnalysis.trend);
 
     // ==================== SYSTEM ADJUSTMENTS ====================
@@ -404,94 +287,17 @@ const AccelerometerGraph: React.FC = () => {
   currentBatchWindow.current = batchTimeWindow;
 
 
-{/*const handleExport = async () => {
-    try {
-      // Verify we have data to export
-      if (!positionBatch || !positionBatch.length) {
-        Alert.alert("No Data", "No breathing data available to export");
-        return;
-      }
-  
-      // Prepare CSV content
-      const timestamp = new Date().toISOString();
-      const csvHeader = "Time(sec),X,Y,Z,Frequency(Hz),Amplitude(m)\n";
-      
-      let csvContent = csvHeader;
-      
-      positionBatch.forEach((sample, index) => {
-        const time = (index / samplingRate).toFixed(3);
-        const freq = (frequency[index] ?? 0).toFixed(5);
-        const amp = (amplitude[index] ?? 0).toFixed(6);
-        
-        csvContent += `${time},${sample.x},${sample.y},${sample.z},${freq},${amp}\n`;
-      });
-  
-      // Define save path
-      const path = `${FileSystem.documentDirectory}breathing_analysis_${timestamp}.csv`;
-      
-      // Write file
-      await FileSystem.writeAsStringAsync(path, csvContent);
-      console.log("✅ CSV saved to:", path, {
-        samples: positionBatch.length,
-        frequencies: frequency.length,
-        amplitudes: amplitude.length
-      }
-      );
-  
-      // Share the file
-      if (await Sharing.isAvailableAsync()) {
-        await Sharing.shareAsync(path, {
-          mimeType: 'text/csv',
-          dialogTitle: 'Share Breathing Analysis',
-          UTI: 'public.comma-separated-values-text'
-        });
-      } else {
-        Alert.alert(
-          'Export Complete',
-          `File saved to: ${path}`,
-          [{ text: 'OK' }]
-        );
-      }
-  
-    } catch (error: unknown) {
-      console.error('❌ Export failed:', error);
-      let errorMessage = 'Could not save the data file';
-      if (error instanceof Error) errorMessage = error.message;
-      Alert.alert('Export Failed', errorMessage, [{ text: 'OK' }]);
-    }
-  };
-  
-  // OR 2. Call it automatically after successful analysis:
-  //if (frequency.length >= 3 && positionBatch.length >= 75000 ) {
-  //  handleExport().catch(console.error);
-  //}
-  const checkForExport = () => {
-    const TEN_MINUTES_MS = 1 * 60 * 1000;
-  
-    if (
-      startTimeRef.current &&
-      Date.now() - startTimeRef.current >= TEN_MINUTES_MS &&
-      frequency.length >= 3 &&
-      positionBatch.length >= 75000
-    ) {
-      handleExport().catch(console.error);
-    }
-  };
-  checkForExport();
-  */}
   
 }
 
   return (
     <ScrollView style={styles.container}>
-      <Text style={styles.header}>Position Data (X, Y, Z)</Text>
-      {/*positionDataBatch.map((dataPoint, index) => (
-        <View key={index} style={styles.row}>
-          <Text style={styles.cell}>X: {dataPoint.x.toFixed(4)}</Text>
-          <Text style={styles.cell}>Y: {dataPoint.y.toFixed(4)}</Text>
-          <Text style={styles.cell}>Z: {dataPoint.z.toFixed(4)}</Text>
-        </View>
-      ))*/}
+      <Text style={styles.header}>Last 3 frequencies (Hz):</Text>
+      {/*frequency.slice(-3).map((freq, index) => (
+      <View key={`freq-${index}`} style={styles.row}>
+        <Text style={styles.cell}>Measurement {index + 1}: {freq.toFixed(2)}</Text>
+      </View>
+    ))*/}
     </ScrollView>
   );
 };
