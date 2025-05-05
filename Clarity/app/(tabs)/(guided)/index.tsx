@@ -1,5 +1,4 @@
 import { View, StyleSheet, Image, Text } from "react-native";
-import Button from "@/components/Button"
 import ImageViewer from "@/components/ImageViewer"
 import LinkButton from "@/components/LinkButton"
 
@@ -9,7 +8,7 @@ export default function Index() {
     <View style={styles.container}>
       <View style={styles.textContainer}>
         <Text style={styles.explanation}>
-          Benefit from a wide range of different guided meditation styles to improve focus, mental wellbeing and overall better energy levels. 
+          Benefit from a wide range of different guided meditation styles to improve focus, mental wellbeing and boost overall energy levels. 
         </Text>
         <Text style={styles.explanation}>
            
@@ -18,19 +17,20 @@ export default function Index() {
           We are here to guide you into a calmer future.
         </Text>
       </View>
-      <View style={styles.imageContainer}>
+      <View style={styles.imageWrapper}>
         <ImageViewer imgSource={require("../../../assets/custom_images/logo.png")} />
       </View>
-      <View style={styles.footerContainer}>
+      <View style={styles.buttonsContainer}>
+      <View style={styles.buttonWrapper}>
         <LinkButton label="Breathing Meditation" destination="/breathingMeditation"/>
       </View>
-      <View style={styles.footerContainer}>
+      <View style={styles.buttonWrapper}>
         <LinkButton label="Mantra Meditation" destination="/mantraMeditation"/>
       </View>
-      <View style={styles.footerContainer}>
+      <View style={styles.buttonWrapper}>
         <LinkButton label="Body Scan" destination="/bodyScan"/>
       </View>
-
+      </View>
     </View>
   );
 }
@@ -38,44 +38,35 @@ export default function Index() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    justifyContent: "center",
+    justifyContent: "space-between",
     alignItems: "center",
-    backgroundColor: "#152238"
-  },
-  text: {
-    fontSize: 30,
-    color: "#FFF",
-    textAlign: "center",
-    justifyContent: "center"
+    backgroundColor: "#152238",
+    padding: 20,
   },
   textContainer: {
-    flex: 1/3,
-    padding: 50,
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 20,
   },
   explanation: {
     fontSize: 15,
     color: "#FFF",
+    textAlign: "justify",
+  },
+  imageWrapper: {
+    flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    textAlign: "center",
   },
-  button: {
-    fontSize: 20,
-    textDecorationLine: "underline",
-    color: "#FFF"
+  buttonWrapper: {
+    marginVertical: 20, // Gleicher vertikaler Abstand zwischen allen Buttons
+    width: "80%", // Optional: Einheitliche Breite für Buttons
+    alignItems: "center",
   },
-  imageContainer: {
-    padding: 1,
-    flex: 1/2,    
-  },
-  image: {
-    width: 200,
-    height: 200,
-    borderRadius: 18,
-  },
-  footerContainer: {
-    flex: 1/3,
-    alignItems: 'center',
-    
+  buttonsContainer: {
+    justifyContent: "center",
+    alignItems: "center",
+    width: "100%",
   },
 });

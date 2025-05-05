@@ -1,6 +1,6 @@
 import { Text, View, StyleSheet } from "react-native";
 import { Link } from "expo-router";
-import Button from "@/components/Button"
+import LinkButton from "@/components/LinkButton";
 import ImageViewer from "@/components/ImageViewer";
 
 export default function MantraMeditation() {
@@ -16,9 +16,9 @@ export default function MantraMeditation() {
          <ImageViewer imgSource={require("../../../../assets/custom_images/mantra.png")} />
       </View>
       <View style={styles.buttonWrapper}>
-        <Button label="Breathing Meditation" />
+      <LinkButton label="Mantra Meditation" destination="/choose_mantra" />
       </View>
-      <View style={styles.textFootContainer}>
+      <View style={styles.textContainer}>
         <Text style={styles.explanation}>
           Mantra Meditation is a Meditation technique that requires the meditator to repeat a specific word or sentance with deeper meaning in their head. 
           It can be any kind of phrase for instance: "Love is all there is." or "Life is great".
@@ -52,12 +52,6 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-  },
-  textFootContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    paddingHorizontal: 20,
   },
   explanation: {
     fontSize: 15,

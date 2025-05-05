@@ -47,17 +47,16 @@ export default function TabsLayout() {
                     />}}
         />
         <Tabs.Screen 
-            name="account"
+            name="(account_tab)"
             options={{
                 title: "Your Account",
-                headerTitleAlign: "center",
-                tabBarIcon: ({color, focused}) => (
+                headerShown: false,
+                tabBarIcon: ({}) => 
                     <Image 
                         source={require("../../assets/custom_images/nav1.png")}
                         style={{width: 30, height:30}}
                         resizeMode="contain"
                     />
-                ),
             }}
         />
        

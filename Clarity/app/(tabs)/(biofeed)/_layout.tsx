@@ -19,6 +19,44 @@ export default function BiofeedLayout() {
             }}
 
         />
+        <Stack.Screen
+            name="polarCheck"
+            options={{
+                title: "polarCheck",
+                headerTitleAlign: "center",
+                headerShadowVisible: false,
+                headerStyle: {
+                    backgroundColor: "#152238",
+                  },
+                headerTintColor: '#FFF',
+            }}
+
+        />
+        <Stack.Screen
+            name="read"
+            options={{
+                title: "Biofeedback Meditation",
+                headerTitleAlign: "center",
+                headerShadowVisible: false,
+                headerStyle: {
+                    backgroundColor: "#152238",
+                  },
+                headerTintColor: '#FFF',
+            }}
+
+        />
+        <Stack.Screen
+            name="readHR"
+            options={{
+                title: "Read with HR",
+                headerTitleAlign: "center",
+                headerShadowVisible: false,
+                headerStyle: {
+                    backgroundColor: "#152238",
+                  },
+                headerTintColor: '#FFF',
+            }}
+            />
       </Stack>
     </>
   );

@@ -2,6 +2,8 @@ import { Text, View, StyleSheet } from "react-native";
 import { Link } from "expo-router";
 import ImageViewer from "@/components/ImageViewer";
 import Button from "@/components/Button";
+import LinkButton from "@/components/LinkButton";
+
 import AudioButton from "../../../components/AudioButton";
 
 
@@ -20,7 +22,8 @@ export default function Biofeed() {
         <ImageViewer imgSource={require("@/assets/custom_images/feedback.png")} />
       </View>
       <View style={styles.buttonWrapper}>
-        <Button label="Start now!"/>
+        {/*<Button label="Start now!"/>*/}
+        <LinkButton label="Start now!" destination="/read"/>
       </View>
       <View style={styles.textFootContainer}>
         <Text style={styles.explanation}>

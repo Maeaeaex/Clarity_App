@@ -14,7 +14,7 @@
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
-        "backgroundColor": "#FFF"
+        "backgroundColor": "#FFFFFF"
       }
     },
     "web": {
@@ -39,8 +39,18 @@
     },
     "splash": {
       "image" : "./assets/images/splash.png",
-      "backgroundColor": "#000",
+      "backgroundColor": "#000000",
       "resizeMode": "cover"
+    },
+    //hinzugefügt für funktionieren am handy
+    // Add these fields for OTA updates
+    //"updates": {
+      //"url": "https://exp.host/@your-username/Clarity"
+    //},
+    // Define runtime version for compatibility
+    "runtimeVersion": {
+      // Use semantic versioning or a custom string
+      "policy": "appVersion"
     }
   }
 }

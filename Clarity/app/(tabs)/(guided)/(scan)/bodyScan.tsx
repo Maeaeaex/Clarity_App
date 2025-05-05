@@ -1,6 +1,5 @@
 import { Text, View, StyleSheet } from "react-native";
-import { Link } from "expo-router";
-import Button from "@/components/Button"
+import LinkButton from "@/components/LinkButton";
 import ImageViewer from "@/components/ImageViewer";
 
 export default function MantraMeditation() {
@@ -16,9 +15,9 @@ export default function MantraMeditation() {
          <ImageViewer imgSource={require("../../../../assets/custom_images/scan.png")} />
       </View>
       <View style={styles.buttonWrapper}>
-        <Button label="Breathing Meditation" />
+      <LinkButton label="Body Scan" destination="/choose_scan" />
       </View>
-      <View style={styles.textFootContainer}>
+      <View style={styles.textContainer}>
         <Text style={styles.explanation}>
           Body Scan Meditation is a technique that allowes the Meditator to focus on bodily sensations. 
           The meditator can focus the Meditation on small and also on big parts of the body. This helps the Meditator to connect to their body in a more deep and non-judgemental way. 
@@ -52,12 +51,6 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-  },
-  textFootContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    paddingHorizontal: 20,
   },
   explanation: {
     fontSize: 15,

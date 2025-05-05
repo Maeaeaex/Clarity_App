@@ -17,7 +17,7 @@ export default function BreathingMeditation() {
       <View style={styles.buttonWrapper}>
         <LinkButton label="Breathing Meditation" destination="/choose"/>
       </View>
-      <View style={styles.textFootContainer}>
+      <View style={styles.textContainer}>
         <Text style={styles.explanation}>
           Breathing Meditation is a meditation technique that requires the meditator to stay focused on their breathing pattern.
 
@@ -56,12 +56,6 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-  },
-  textFootContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    paddingHorizontal: 20,
   },
   explanation: {
     fontSize: 15,

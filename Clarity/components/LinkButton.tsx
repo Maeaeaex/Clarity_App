@@ -9,6 +9,13 @@ type Props = {
     | "/mantraMeditation"
     | "/bodyScan"
     | "/choose"
+    | "/read"
+    | "/choose_mantra"
+    | "/choose_scan"
+    | "/rewards"
+    | "/progress"
+    | "/profile"
+    | "/biofeed"
 };
 
 export default function LinkButton({ label, destination }: Props) {

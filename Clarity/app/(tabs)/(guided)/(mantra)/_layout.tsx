@@ -18,6 +18,18 @@ export default function MantraLayout() {
             headerTintColor: '#000',
           }}
         />
+        <Stack.Screen 
+          name="choose_mantra"
+          options={{
+            headerTitle: "Mantra Meditation", 
+            headerShadowVisible: false,
+            headerTitleAlign: "center",
+            headerStyle: {
+              backgroundColor: "#50d4cc",
+            },
+            headerTintColor: '#000',
+          }}
+        />
       </Stack>
     </>
   );

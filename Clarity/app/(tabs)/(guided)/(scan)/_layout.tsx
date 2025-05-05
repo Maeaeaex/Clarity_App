@@ -18,6 +18,18 @@ export default function ScanLayout() {
             headerTintColor: '#FFF',
           }}
         />
+        <Stack.Screen  
+          name="choose_scan" 
+          options={{
+            headerTitle: "Body Scan",
+            headerShadowVisible: false,
+            headerTitleAlign: "center",
+            headerStyle: {
+              backgroundColor: "#152238",
+            },
+            headerTintColor: '#FFF',
+          }}
+        />
       </Stack>
     </>
   );
