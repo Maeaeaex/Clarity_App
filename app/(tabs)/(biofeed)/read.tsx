@@ -1,6 +1,6 @@
 import { Text, View, StyleSheet, ScrollView } from "react-native";
 import ImageViewer from "@/components/ImageViewer";
-import AccelerometerGraph from "@/components/AccelerometerGraph_button";
+import AccelerometerGraph from "@/components/AccelerometerGraph_s";
 
 export default function Read() {
   return (
@@ -17,8 +17,8 @@ export default function Read() {
 
       <View style={styles.accelerometerContainer}>
         <AccelerometerGraph
-          samplingRate={125}
-          bufferDurationSeconds={10} 
+          //samplingRate={125}
+          //bufferDurationSeconds={10} 
         />
       </View>
     </ScrollView>
