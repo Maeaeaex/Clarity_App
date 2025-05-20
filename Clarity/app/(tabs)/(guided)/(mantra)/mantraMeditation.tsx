@@ -20,7 +20,7 @@ export default function MantraMeditation() {
       </View>
       <View style={styles.textContainer}>
         <Text style={styles.explanation}>
-          Mantra Meditation is a Meditation technique that requires the meditator to repeat a specific word or sentance with deeper meaning in their head. 
+          Mantra Meditation is a Meditation technique that requires the meditator to repeat a specific word or sentence with deeper meaning in their head. 
           It can be any kind of phrase for instance: "Love is all there is." or "Life is great".
           The more the meditator repeats this mantra, the more the concentration and deepening oft the Meditation improves.
         </Text>

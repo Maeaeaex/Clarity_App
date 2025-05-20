@@ -18,7 +18,7 @@ export default function Choose() {
         <AudioButton audioFile={require("../../../../assets/audio/test.mp3")} playText="Learn how to breathe"/>
         </View>
         <View style={styles.buttonWrapper}>
-        <AudioButton audioFile={require("../../../../assets/audio/4-7-8.mp3")} playText="4/7/8 - breathing methode"/>
+        <AudioButton audioFile={require("../../../../assets/audio/4-7-8.mp3")} playText="4/7/8 - breathing method"/>
         </View>
         <View style={styles.buttonWrapper}>
         <AudioButton audioFile={require("../../../../assets/audio/stress.mp3")} playText="Breathing to manage stress"/>
